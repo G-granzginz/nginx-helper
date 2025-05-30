@@ -5,7 +5,7 @@ NGINX_PID="/usr/local/nginx/logs/nginx.pid"
 NGINX_LOG="/usr/local/nginx/logs/error.log"
 PID_FILE="/usr/local/nginx/logs/nginx.pid"
 
-LARAVEL_LOG="/path/to/laravel/storage/logs/laravel.log"
+LARAVEL_LOG="/var/www/devfrontnogosec/storage/logs/laravel.log"
 PHPFPM_SERVICE="php8.2-fpm"
 PHPFPM_ERROR_LOG="/var/log/php8.2-fpm.log"  # cek di system kamu, bisa beda
 
@@ -20,14 +20,23 @@ function check_ports() {
     sudo lsof -i :8443 -sTCP:LISTEN
 }
 
+function laravel_cache() {
+    echo "Running Laravel cache commands..."
+    cd /var/www/devfrontnogosec || { echo "Failed to cd to project folder"; exit 1; }
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+}
+
+
 function check_laravel_log() {
-    echo "=== Last 20 lines of Laravel error log ==="
-    tail -n 20 "$LARAVEL_LOG"
+    echo "=== Last 150 lines of Laravel error log ==="
+    tail -n 150 "$LARAVEL_LOG"
 }
 
 function check_phpfpm_log() {
-    echo "=== Last 20 lines of PHP-FPM error log ==="
-    tail -n 20 "$PHPFPM_ERROR_LOG"
+    echo "=== Last 150 lines of PHP-FPM error log ==="
+    tail -n 150 "$PHPFPM_ERROR_LOG"
 }
 
 function php_fpm_start() {
@@ -99,20 +108,23 @@ case "$1" in
   phpfpm-log)
         check_phpfpm_log
         ;;
-  fpmstart)
+  phpfpmstart)
         php_fpm_start
+	laravel_cache
         ;;
-  fpmstop)
+  phpfpmstop)
         php_fpm_stop
+	laravel_cache
         ;;
-  fpmrestart)
+  phpfpmrestart)
         php_fpm_restart
+	laravel_cache
         ;;
-  fpmstatus)
+  phpfpmstatus)
         php_fpm_status
         ;;
   *)
-    echo "🔧 Gunakan: $0 {start|stop|restart|log|ports|laravel-log|phpfpm-log|fpmstart|fpmstop|fpmrestart|fpmstatus}"
+    echo "🔧 Gunakan: $0 {start|stop|restart|log|ports|laravel-log|phpfpm-log|phpfpmstart|phpfpmstop|phpfpmrestart|phpfpmstatus}"
     ;;
 
 esac
