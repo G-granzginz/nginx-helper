@@ -92,8 +92,16 @@ function check_ports() {
 
 function fix_permissions() {
   read -rp "❓ Apakah ini proyek API atau WEB? (api/web): " project_type
-  echo "🛠️  Memperbaiki permission storage & cache ke $NGINX_USER:$NGINX_GROUP untuk proyek $project_type..."
-  sudo chown -R "$NGINX_USER:$NGINX_GROUP" "$LARAVEL_PATH/storage" "$LARAVEL_PATH/bootstrap/cache"
+  if [[ "$project_type" == "api" ]]; then
+    echo "ℹ️  Proyek API terdeteksi. Direktori bootstrap tidak perlu diubah."
+    sudo chown -R "$NGINX_USER:$NGINX_GROUP" "$LARAVEL_PATH/storage"
+  elif [[ "$project_type" == "web" ]]; then
+    echo "🛠️  Memperbaiki permission storage & cache ke $NGINX_USER:$NGINX_GROUP untuk proyek WEB..."
+    sudo chown -R "$NGINX_USER:$NGINX_GROUP" "$LARAVEL_PATH/storage" "$LARAVEL_PATH/bootstrap/cache"
+  else
+    echo "❌ Input tidak valid. Gunakan 'api' atau 'web'. Silakan ulangi kembali. Proses tidak dilanjutkan."
+    exit 1
+  fi
 }
 
 function laravel_cache() {
