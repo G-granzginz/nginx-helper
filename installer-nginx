@@ -402,6 +402,9 @@ echo "[+] Creating firewall-setup helper..."
 cat > /usr/local/bin/firewall-setup <<EOF
 #!/bin/bash
 
+NGINX_HTTP_PORT=8000
+NGINX_HTTPS_PORT=8443
+
 echo "[+] Konfigurasi firewall (ufw) untuk membuka port ${NGINX_HTTP_PORT}..."
 read -rp "Masukkan IP client yang diizinkan mengakses port ${NGINX_HTTP_PORT} (contoh: 172.16.50.0/24 atau anywhere): " CLIENT_IP
 
@@ -425,8 +428,14 @@ echo "✅ Done Firewall-setup."
 EOF
 chmod +x /usr/local/bin/firewall-setup
 
+# Register alias to ~/.bashrc
+if ! grep -q 'alias firewall-setup=' ~/.bashrc; then
+    echo "alias firewall-setup='/usr/local/bin/firewwall-setup'" >> ~/.bashrc
+    echo "[+] Firewall-setup registered. Run 'source ~/.bashrc' to activate it."
+fi
 
 ### Final Script After Berjalan ###
+source ~/.bashrc
 firewall-setup
 nginxctl restarteperithing
 
