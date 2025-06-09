@@ -15,6 +15,20 @@ else
     echo "[✓] User nginxadmin already exists."
 fi
 
+### STEP 0.1: STOP SERVICES BEFORE CHECKING ###
+echo "[+] Checking and stopping running services before proceeding..."
+for svc in nginx php${PHP_VERSION}-fpm; do
+    if systemctl is-active --quiet $svc; then
+        echo "[!] Service '$svc' is running. Stopping it..."
+        systemctl stop $svc
+        echo "[✓] Stopped $svc."
+    else
+        echo "[✓] Service '$svc' is already stopped."
+    fi
+    echo "[+] Killing any remaining user processes for '$svc'..."
+    pkill -u nginxadmin -f "$svc" && echo "[✓] Killed residual processes for $svc." || echo "[✓] No residual $svc processes found."
+done
+
 ### STEP 1: VALIDATE DEPENDENCIES ###
 echo "[+] Validating required packages..."
 REQUIRED_PKG=(nginx php${PHP_VERSION} php${PHP_VERSION}-fpm php${PHP_VERSION}-xdebug net-tools)
@@ -59,6 +73,7 @@ function check_socket() {
 function check_user() {
   echo -e "\n🔍 Checking PHP-FPM process user:"
   ps aux | grep php-fpm | grep -v grep
+
   echo -e "\n🔍 Verifying PHP-FPM pool user setting..."
   if grep -E "^user\s*=\s*nginxadmin" /etc/php/\${PHP_VERSION}/fpm/pool.d/www.conf; then
     echo "[✓] PHP-FPM pool user is set to nginxadmin."
