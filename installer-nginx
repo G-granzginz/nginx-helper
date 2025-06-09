@@ -430,7 +430,7 @@ chmod +x /usr/local/bin/firewall-setup
 
 # Register alias to ~/.bashrc
 if ! grep -q 'alias firewall-setup=' ~/.bashrc; then
-    echo "alias firewall-setup='/usr/local/bin/firewwall-setup'" >> ~/.bashrc
+    echo "alias firewall-setup='/usr/local/bin/firewall-setup'" >> ~/.bashrc
     echo "[+] Firewall-setup registered. Run 'source ~/.bashrc' to activate it."
 fi
 
