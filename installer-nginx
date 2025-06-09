@@ -384,19 +384,6 @@ echo "✅ Done Laravel Auto Check."
 EOF
 chmod +x /usr/local/bin/laravel-check
 
-# Register alias to ~/.bashrc
-if ! grep -q 'alias laravel-check=' ~/.bashrc; then
-    echo "alias laravel-check='/usr/local/bin/laravel-check'" >> ~/.bashrc
-    echo "[+] Laravel alias registered. Run 'source ~/.bashrc' to activate it."
-fi
-
-echo "Check listening port"
-sudo ss -tuln | grep 8000
-sudo ss -tuln | grep 8443
-
-echo "Check firewall status untuk listen dari luar"
-sudo ufw status | grep 8000
-
 ### STEP 11: UFW FIREWALL INTERAKTIF UNTUK PORT HTTP ###
 echo "[+] Creating firewall-setup helper..."
 cat > /usr/local/bin/firewall-setup <<EOF
@@ -429,10 +416,23 @@ EOF
 chmod +x /usr/local/bin/firewall-setup
 
 # Register alias to ~/.bashrc
+if ! grep -q 'alias laravel-check=' ~/.bashrc; then
+    echo "alias laravel-check='/usr/local/bin/laravel-check'" >> ~/.bashrc
+    echo "[+] Laravel alias registered. Run 'source ~/.bashrc' to activate it."
+fi
+
+# Register alias to ~/.bashrc
 if ! grep -q 'alias firewall-setup=' ~/.bashrc; then
     echo "alias firewall-setup='/usr/local/bin/firewall-setup'" >> ~/.bashrc
     echo "[+] Firewall-setup registered. Run 'source ~/.bashrc' to activate it."
 fi
+
+echo "Check listening port"
+sudo ss -tuln | grep 8000
+sudo ss -tuln | grep 8443
+
+echo "Check firewall status untuk listen dari luar"
+sudo ufw status | grep 8000
 
 ### Final Script After Berjalan ###
 source ~/.bashrc
