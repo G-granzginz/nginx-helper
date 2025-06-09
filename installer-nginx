@@ -99,7 +99,7 @@ function fix_permissions() {
     echo "🛠️  Memperbaiki permission storage & cache ke $NGINX_USER:$NGINX_GROUP untuk proyek WEB..."
     sudo chown -R "$NGINX_USER:$NGINX_GROUP" "$LARAVEL_PATH/storage" "$LARAVEL_PATH/bootstrap/cache"
   else
-    echo "❌ Input tidak valid. Gunakan 'api' atau 'web'. Silakan ulangi kembali. Proses tidak dilanjutkan."
+    echo "❌ Input tidak valid. Gunakan 'api' atau 'web'. Silakan ulangi kembali. Proses tidak dieksekusi."
     exit 1
   fi
 }
