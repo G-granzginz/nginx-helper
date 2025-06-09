@@ -126,7 +126,16 @@ sed -i "s/^group = .*/group = nginxadmin/" /etc/php/${PHP_VERSION}/fpm/pool.d/ww
 ### STEP 6: FIX PERMISSIONS ###
 echo "[+] Fixing permissions for Laravel and Xdebug log..."
 mkdir -p /var/log/xdebug
-chown -R nginxadmin:nginxadmin /var/www /var/log/xdebug
+chown -R nginxadmin:nginxadmin /var/log/xdebug
+
+# Set ownership for each Laravel project directory under /var/www
+for dir in /var/www/*; do
+  if [ -d "$dir" ]; then
+    echo "[+] Setting ownership for \$dir to nginxadmin..."
+    chown -R nginxadmin:nginxadmin "$dir"
+  fi
+  
+done
 
 ### STEP 7: RESTART SERVICES ###
 echo "[+] Restarting services..."
