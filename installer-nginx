@@ -1,0 +1,110 @@
+#!/bin/bash
+set -e
+
+### STEP 0: CREATE nginxadmin USER IF NEEDED ###
+echo "[+] Checking if user 'nginxadmin' exists..."
+if ! id -u nginxadmin >/dev/null 2>&1; then
+    echo "[+] Creating user nginxadmin..."
+    useradd -m -s /bin/bash nginxadmin
+    echo "nginxadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/nginxadmin
+    echo "nginxadmin:nginxadmin" | chpasswd
+    echo "[✓] User nginxadmin created with default password."
+else
+    echo "[✓] User nginxadmin already exists."
+fi
+
+### STEP 1: VALIDATE DEPENDENCIES ###
+echo "[+] Validating required packages..."
+REQUIRED_PKG=(nginx php php-fpm php-xdebug net-tools)
+for pkg in "${REQUIRED_PKG[@]}"; do
+    if ! dpkg -s "$pkg" &>/dev/null; then
+        echo "[!] Package '$pkg' not found. Installing..."
+        apt install -y "$pkg"
+    else
+        echo "[✓] $pkg is already installed."
+    fi
+done
+
+### STEP 2: CREATE nginxctl HELPER ###
+echo "[+] Creating nginxctl helper..."
+cat > /usr/local/bin/nginxctl <<'EOF'
+#!/bin/bash
+case "$1" in
+  start) sudo systemctl start nginx ;;
+  stop) sudo systemctl stop nginx ;;
+  restart) sudo systemctl restart nginx ;;
+  reload) sudo nginx -s reload ;;
+  configtest) sudo nginx -t ;;
+  *) echo "Usage: $0 {start|stop|restart|reload|configtest}" ;;
+esac
+EOF
+chmod +x /usr/local/bin/nginxctl
+
+### STEP 3: CREATE xdebug-check HELPER ###
+echo "[+] Creating xdebug-check helper..."
+cat > /usr/local/bin/xdebug-check <<'EOF'
+#!/bin/bash
+
+SOCKET="/run/php/php8.2-fpm.sock"
+XLOG="/var/log/xdebug/xdebug.log"
+
+function check_socket() {
+  echo "🔍 PHP-FPM Socket: $SOCKET"
+  [[ -S "$SOCKET" ]] && echo "✅ PHP-FPM socket is active." || echo "❌ Socket not found."
+}
+
+function check_user() {
+  echo -e "\n🔍 Checking PHP-FPM process user:"
+  ps aux | grep php-fpm | grep -v grep
+}
+
+function xdebug_config() {
+  echo -e "\n🔍 Xdebug ini loaded in PHP-FPM:"
+  php-fpm8.2 -i | grep -i xdebug | grep -v "setting removed"
+}
+
+function port_check() {
+  echo -e "\n🔍 Checking if port 9003 on host 127.0.0.1 is reachable..."
+  nc -zv 127.0.0.1 9003 && echo "✅ Debug port 9003 is reachable." || echo "❌ Debug port 9003 unreachable."
+}
+
+function tail_log() {
+  echo -e "\n📄 Last 10 lines of Xdebug log:"
+  tail -n 10 "$XLOG"
+}
+
+check_socket
+check_user
+xdebug_config
+port_check
+tail_log
+
+echo -e "\n✅ Done."
+EOF
+chmod +x /usr/local/bin/xdebug-check
+
+### STEP 4: CONFIGURE NGINX USER ###
+echo "[+] Updating nginx.conf to use user nginxadmin..."
+sed -i 's/^user .*;/user nginxadmin;/' /etc/nginx/nginx.conf || echo 'user nginxadmin;' >> /etc/nginx/nginx.conf
+
+### STEP 5: CONFIGURE PHP-FPM USER AND SOCKET ###
+echo "[+] Updating PHP-FPM pool configuration..."
+sed -i 's/^user = .*/user = nginxadmin/' /etc/php/8.2/fpm/pool.d/www.conf
+sed -i 's/^group = .*/group = nginxadmin/' /etc/php/8.2/fpm/pool.d/www.conf
+
+### STEP 6: FIX PERMISSIONS ###
+echo "[+] Fixing permissions for Laravel and Xdebug log..."
+mkdir -p /var/log/xdebug
+chown -R nginxadmin:nginxadmin /var/www /var/log/xdebug
+
+### STEP 7: RESTART SERVICES ###
+echo "[+] Restarting services..."
+systemctl restart php8.2-fpm
+systemctl restart nginx
+
+### STEP 8: VALIDATION ###
+echo "[+] Running nginxctl and xdebug-check..."
+nginxctl restart
+xdebug-check
+
+echo -e "\n🚀 Setup complete! You may now test your Laravel app with Xdebug + nginxadmin user."
