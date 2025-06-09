@@ -398,6 +398,10 @@ echo "Check firewall status untuk listen dari luar"
 sudo ufw status | grep 8000
 
 ### STEP 11: UFW FIREWALL INTERAKTIF UNTUK PORT HTTP ###
+echo "[+] Creating firewall-setup helper..."
+cat > /usr/local/bin/firewall-setup <<EOF
+#!/bin/bash
+
 echo "[+] Konfigurasi firewall (ufw) untuk membuka port ${NGINX_HTTP_PORT}..."
 read -rp "Masukkan IP client yang diizinkan mengakses port ${NGINX_HTTP_PORT} (contoh: 172.16.50.0/24 atau anywhere): " CLIENT_IP
 
@@ -417,9 +421,13 @@ else
     echo "❌ Format IP tidak valid! Contoh valid: 192.168.1.100, 192.168.1.0/24, atau 'anywhere'"
     echo "⚠️  Proses konfigurasi firewall tidak dieksekusi."
 fi
+echo "✅ Done Firewall-setup."
+EOF
+chmod +x /usr/local/bin/firewall-setup
 
 
 ### Final Script After Berjalan ###
+firewall-setup
 nginxctl restarteperithing
 
 
