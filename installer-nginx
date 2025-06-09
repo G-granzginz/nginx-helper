@@ -15,7 +15,7 @@ else
     echo "[✓] User nginxadmin already exists."
 fi
 
-### STEP 0.1: STOP SERVICES BEFORE CHECKING ###
+### STEP 0.1: CHECK IF SERVICES ARE RUNNING AND STOP IF NECESSARY ###
 echo "[+] Checking and stopping running services before proceeding..."
 for svc in nginx php${PHP_VERSION}-fpm; do
     if systemctl is-active --quiet $svc; then
@@ -25,9 +25,17 @@ for svc in nginx php${PHP_VERSION}-fpm; do
     else
         echo "[✓] Service '$svc' is already stopped."
     fi
-    echo "[+] Killing any remaining user processes for '$svc'..."
-    pkill -u nginxadmin -f "$svc" && echo "[✓] Killed residual processes for $svc." || echo "[✓] No residual $svc processes found."
+    echo "[+] Skipping manual kill for '$svc'."
 done
+
+### STEP 0.2: KILL ANY www-data PHP-FPM WORKERS ###
+echo "[+] Checking for PHP-FPM processes running as www-data..."
+if pgrep -u www-data php-fpm > /dev/null; then
+    echo "[!] Killing php-fpm processes owned by www-data..."
+    pkill -u www-data php-fpm && echo "[✓] Killed www-data php-fpm processes."
+else
+    echo "[✓] No php-fpm processes owned by www-data."
+fi
 
 ### STEP 1: VALIDATE DEPENDENCIES ###
 echo "[+] Validating required packages..."
@@ -87,6 +95,9 @@ function check_user() {
   else
     echo "[!] Nginx user is NOT nginxadmin."
   fi
+
+  echo -e "\n🔍 Checking config files for www-data reference..."
+  grep -r "www-data" /etc/php/\${PHP_VERSION}/fpm/pool.d /etc/nginx/ /etc/php/\${PHP_VERSION}/fpm/conf.d 2>/dev/null && echo "[!] Warning: Some configs still refer to www-data." || echo "[✓] No references to www-data found."
 }
 
 function xdebug_config() {
@@ -131,7 +142,7 @@ chown -R nginxadmin:nginxadmin /var/log/xdebug
 # Set ownership for each Laravel project directory under /var/www
 for dir in /var/www/*; do
   if [ -d "$dir" ]; then
-    echo "[+] Setting ownership for \$dir to nginxadmin..."
+    echo "[+] Setting ownership for $dir to nginxadmin..."
     chown -R nginxadmin:nginxadmin "$dir"
   fi
   
