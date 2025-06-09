@@ -308,6 +308,8 @@ for dir in /var/www/*; do
 done
 
 ### STEP 7: RESTART SERVICES ###
+echo "🛠️  mengatasi jika ada rsidu pada nginx"
+systemctl stop nginx
 echo "🛠️  Mencari dan menghentikan semua proses nginx..."
 pkill -f nginx && echo "✅ Semua proses nginx berhasil dihentikan." || echo "ℹ️  Tidak ada proses nginx yang aktif."
 echo "[+] Restarting services..."
