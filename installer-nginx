@@ -47,6 +47,7 @@ for pkg in "${REQUIRED_PKG[@]}"; do
     else
         echo "[✓] $pkg is already installed."
     fi
+    alias laravel-check='/usr/local/bin/laravel-check'
 done
 
 ### STEP 2: CREATE nginxctl HELPER ###
@@ -170,6 +171,7 @@ echo -e "\n📦 Tools bantu:"
 echo " - nginxctl        → /usr/local/bin/nginxctl"
 echo " - xdebug-check    → /usr/local/bin/xdebug-check"
 echo " - laravel-check   → /usr/local/bin/laravel-check"
+echo " - Laravel Alias   → run 'source ~/.bashrc' lalu pakai: laravel-check"
 
 echo -e "\n✅ Semua konfigurasi siap digunakan dengan user 'nginxadmin'."
 
@@ -193,3 +195,9 @@ php artisan migrate:status || echo "⚠️ DB connection issue or no migrations.
 echo "✅ Done Laravel Auto Check."
 EOF
 chmod +x /usr/local/bin/laravel-check
+
+# Register alias to ~/.bashrc
+if ! grep -q 'alias laravel-check=' ~/.bashrc; then
+    echo "alias laravel-check='/usr/local/bin/laravel-check'" >> ~/.bashrc
+    echo "[+] Laravel alias registered. Run 'source ~/.bashrc' to activate it."
+fi
