@@ -5,7 +5,9 @@ PHP_VERSION="8.2"
 LARAVEL_FOLDER="devnogosec"
 LARAVEL_PATH="/var/www/$LARAVEL_FOLDER"
 NGINXCTL_PATH="/usr/local/bin/nginxctl"
-
+# Custom port variables
+NGINX_HTTP_PORT=8000
+NGINX_HTTPS_PORT=8443
 
 ### STEP 0: CREATE nginxadmin USER IF NEEDED ###
 echo "[+] Checking if user 'nginxadmin' exists..."
@@ -53,6 +55,27 @@ for pkg in "${REQUIRED_PKG[@]}"; do
     fi
     alias laravel-check='/usr/local/bin/laravel-check'
 done
+
+### STEP Additional 1 : CONFIGURE NGINX USER ###
+echo "[+] Updating nginx.conf to use user nginxadmin..."
+sed -i 's/^user .*/user nginxadmin;/' /etc/nginx/nginx.conf || echo 'user nginxadmin;' >> /etc/nginx/nginx.conf
+
+### STEP Additional 1 : CONFIGURE NGINX PORT ###
+echo "[+] Updating Nginx site config ports..."
+NGINX_SITE_CONF="/etc/nginx/sites-available/$(ls /etc/nginx/sites-enabled/ | head -n 1)"
+if [[ -f "$NGINX_SITE_CONF" ]]; then
+  sed -i "/listen 80 default_server;/d" "$NGINX_SITE_CONF"
+  sed -i "/listen \[::\]:80 default_server;/d" "$NGINX_SITE_CONF"
+  sed -i "s/listen 80;/listen ${NGINX_HTTP_PORT};/" "$NGINX_SITE_CONF"
+  sed -i "s/listen \[::\]:80;/listen [::]:${NGINX_HTTP_PORT};/" "$NGINX_SITE_CONF"
+  sed -i "/listen 443 ssl default_server;/d" "$NGINX_SITE_CONF"
+  sed -i "/listen \[::\]:443 ssl default_server;/d" "$NGINX_SITE_CONF"
+  sed -i "s/listen 443 ssl;/listen ${NGINX_HTTPS_PORT} ssl;/" "$NGINX_SITE_CONF"
+  sed -i "s/listen \[::\]:443 ssl;/listen [::]:${NGINX_HTTPS_PORT} ssl;/" "$NGINX_SITE_CONF"
+  echo "\u2705 Ports updated in $NGINX_SITE_CONF"
+else
+  echo "\u274c Nginx site config not found."
+fi
 
 ### STEP 2: CREATE nginxctl HELPER ###
 echo "[+] Creating nginxctl helper..."
@@ -364,3 +387,6 @@ if ! grep -q 'alias laravel-check=' ~/.bashrc; then
     echo "alias laravel-check='/usr/local/bin/laravel-check'" >> ~/.bashrc
     echo "[+] Laravel alias registered. Run 'source ~/.bashrc' to activate it."
 fi
+
+### Final Script After Berjalan ###
+nginxctl
