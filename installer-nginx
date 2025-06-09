@@ -2,6 +2,7 @@
 set -e
 
 PHP_VERSION="8.2"
+LARAVEL_FOLDER="devnogosec"
 
 ### STEP 0: CREATE nginxadmin USER IF NEEDED ###
 echo "[+] Checking if user 'nginxadmin' exists..."
@@ -146,7 +147,7 @@ for dir in /var/www/*; do
     echo "[+] Setting ownership for $dir to nginxadmin..."
     chown -R nginxadmin:nginxadmin "$dir"
   fi
-  
+
 done
 
 ### STEP 7: RESTART SERVICES ###
@@ -162,7 +163,7 @@ xdebug-check
 ### STEP 9: DISPLAY CONFIG LOCATIONS ###
 echo -e "\n📁 Konfigurasi utama yang digunakan:"
 echo " - Nginx global config      : /etc/nginx/nginx.conf"
-echo " - Nginx site config        : /etc/nginx/sites-available/$(ls /etc/nginx/sites-enabled/ | head -n 1)"
+echo " - Nginx site config        : /etc/nginx/sites-available/\$(ls /etc/nginx/sites-enabled/ | head -n 1)"
 echo " - PHP-FPM pool config      : /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf"
 echo " - Xdebug config (auto load): /etc/php/${PHP_VERSION}/fpm/conf.d/20-xdebug.ini"
 echo " - Xdebug log               : /var/log/xdebug/xdebug.log"
@@ -179,10 +180,12 @@ echo -e "\n🚀 Setup complete! You may now test your Laravel app with Xdebug + 
 
 ### STEP 10: LARAVEL AUTOCONFIG CHECKER ###
 echo "[+] Creating laravel-check helper..."
-cat > /usr/local/bin/laravel-check <<'EOF'
+cat > /usr/local/bin/laravel-check <<EOF
 #!/bin/bash
 
-cd /var/www/* || { echo "Laravel folder not found."; exit 1; }
+LARAVEL_PATH="/var/www/${LARAVEL_FOLDER}"
+
+cd "\$LARAVEL_PATH" || { echo "Laravel folder not found at \$LARAVEL_PATH"; exit 1; }
 
 echo "🔍 Checking Laravel Autoconfig..."
 [[ -f .env ]] && echo "✅ .env file exists." || echo "❌ .env file missing!"
