@@ -390,5 +390,11 @@ if ! grep -q 'alias laravel-check=' ~/.bashrc; then
     echo "[+] Laravel alias registered. Run 'source ~/.bashrc' to activate it."
 fi
 
+echo "Check listening port"
+sudo ss -tuln | grep 8000
+sudo ss -tuln | grep 8443
+
 ### Final Script After Berjalan ###
 nginxctl restarteperithing
+
+
