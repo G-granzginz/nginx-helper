@@ -11,7 +11,7 @@ if ! id -u nginxadmin >/dev/null 2>&1; then
     useradd -m -s /bin/bash nginxadmin
     echo "nginxadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/nginxadmin
     echo "nginxadmin:nginxadmin" | chpasswd
-    echo "[✓] User nginxadmin created with default password."
+    echo "[✓] User nginxadmin created with default password: nginxadmin"
 else
     echo "[✓] User nginxadmin already exists."
 fi
@@ -174,7 +174,7 @@ echo " - xdebug-check    → /usr/local/bin/xdebug-check"
 echo " - laravel-check   → /usr/local/bin/laravel-check"
 echo " - Laravel Alias   → run 'source ~/.bashrc' lalu pakai: laravel-check"
 
-echo -e "\n✅ Semua konfigurasi siap digunakan dengan user 'nginxadmin'."
+echo -e "\n✅ Semua konfigurasi siap digunakan dengan user 'nginxadmin'. (Password default: nginxadmin)"
 
 echo -e "\n🚀 Setup complete! You may now test your Laravel app with Xdebug + nginxadmin user."
 
