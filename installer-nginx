@@ -310,7 +310,7 @@ done
 ### STEP 7: RESTART SERVICES ###
 echo "🛠️  Mencari dan menghentikan semua proses nginx..."
 systemctl stop nginx && echo "✅ Nginx hard stop : Semua proses nginx berhasil dihentikan." || echo "ℹ️  Tidak ada proses nginx yang aktif."
-systemctl stop php${PHP_VERSION}-fpm "✅ Php-fpm hard stop : Semua proses nginx berhasil dihentikan." || echo "ℹ️  Tidak ada proses nginx yang aktif."
+systemctl stop php${PHP_VERSION}-fpm && echo "✅ Php-fpm hard stop : Semua proses php${PHP_VERSION}-fpm berhasil dihentikan." || echo "ℹ️  Tidak ada proses php${PHP_VERSION}-fpm yang aktif."
 echo "[+] Restarting services..."
 systemctl restart php${PHP_VERSION}-fpm
 systemctl restart nginx
