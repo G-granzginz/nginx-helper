@@ -91,7 +91,8 @@ function check_ports() {
 }
 
 function fix_permissions() {
-  echo "🛠️  Memperbaiki permission storage & cache ke $NGINX_USER:$NGINX_GROUP ..."
+  read -rp "❓ Apakah ini proyek API atau WEB? (api/web): " project_type
+  echo "🛠️  Memperbaiki permission storage & cache ke $NGINX_USER:$NGINX_GROUP untuk proyek $project_type..."
   sudo chown -R "$NGINX_USER:$NGINX_GROUP" "$LARAVEL_PATH/storage" "$LARAVEL_PATH/bootstrap/cache"
 }
 
