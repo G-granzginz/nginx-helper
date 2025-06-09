@@ -138,4 +138,18 @@ echo "[+] Running nginxctl and xdebug-check..."
 nginxctl restart
 xdebug-check
 
+### STEP 9: DISPLAY CONFIG LOCATIONS ###
+echo -e "\n📁 Konfigurasi utama yang digunakan:"
+echo " - Nginx global config      : /etc/nginx/nginx.conf"
+echo " - Nginx site config        : /etc/nginx/sites-available/$(ls /etc/nginx/sites-enabled/ | head -n 1)"
+echo " - PHP-FPM pool config      : /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf"
+echo " - Xdebug config (auto load): /etc/php/${PHP_VERSION}/fpm/conf.d/20-xdebug.ini"
+echo " - Xdebug log               : /var/log/xdebug/xdebug.log"
+
+echo -e "\n📦 Tools bantu:"
+echo " - nginxctl        → /usr/local/bin/nginxctl"
+echo " - xdebug-check    → /usr/local/bin/xdebug-check"
+
+echo -e "\n✅ Semua konfigurasi siap digunakan dengan user 'nginxadmin'."
+
 echo -e "\n🚀 Setup complete! You may now test your Laravel app with Xdebug + nginxadmin user."
