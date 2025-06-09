@@ -9,6 +9,11 @@ NGINXCTL_PATH="/usr/local/bin/nginxctl"
 NGINX_HTTP_PORT=8000
 NGINX_HTTPS_PORT=8443
 
+echo "🛠️  Mencari dan menghentikan semua proses nginx..."
+systemctl stop nginx && echo "✅ Nginx hard stop : Semua proses nginx berhasil dihentikan." || echo "ℹ️  Tidak ada proses nginx yang aktif."
+systemctl stop php${PHP_VERSION}-fpm && echo "✅ Php-fpm hard stop : Semua proses php${PHP_VERSION}-fpm berhasil dihentikan." || echo "ℹ️  Tidak ada proses php${PHP_VERSION}-fpm yang aktif."
+
+
 ### STEP 0: CREATE nginxadmin USER IF NEEDED ###
 echo "[+] Checking if user 'nginxadmin' exists..."
 if ! id -u nginxadmin >/dev/null 2>&1; then
@@ -331,9 +336,6 @@ for dir in /var/www/*; do
 done
 
 ### STEP 7: RESTART SERVICES ###
-echo "🛠️  Mencari dan menghentikan semua proses nginx..."
-systemctl stop nginx && echo "✅ Nginx hard stop : Semua proses nginx berhasil dihentikan." || echo "ℹ️  Tidak ada proses nginx yang aktif."
-systemctl stop php${PHP_VERSION}-fpm && echo "✅ Php-fpm hard stop : Semua proses php${PHP_VERSION}-fpm berhasil dihentikan." || echo "ℹ️  Tidak ada proses php${PHP_VERSION}-fpm yang aktif."
 echo "[+] Restarting services..."
 systemctl restart php${PHP_VERSION}-fpm
 systemctl restart nginx
@@ -389,4 +391,4 @@ if ! grep -q 'alias laravel-check=' ~/.bashrc; then
 fi
 
 ### Final Script After Berjalan ###
-nginxctl
+nginxctl restarteperithing
