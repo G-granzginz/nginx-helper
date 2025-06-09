@@ -169,7 +169,27 @@ echo " - Xdebug log               : /var/log/xdebug/xdebug.log"
 echo -e "\n📦 Tools bantu:"
 echo " - nginxctl        → /usr/local/bin/nginxctl"
 echo " - xdebug-check    → /usr/local/bin/xdebug-check"
+echo " - laravel-check   → /usr/local/bin/laravel-check"
 
 echo -e "\n✅ Semua konfigurasi siap digunakan dengan user 'nginxadmin'."
 
 echo -e "\n🚀 Setup complete! You may now test your Laravel app with Xdebug + nginxadmin user."
+
+### STEP 10: LARAVEL AUTOCONFIG CHECKER ###
+echo "[+] Creating laravel-check helper..."
+cat > /usr/local/bin/laravel-check <<'EOF'
+#!/bin/bash
+
+cd /var/www/* || { echo "Laravel folder not found."; exit 1; }
+
+echo "🔍 Checking Laravel Autoconfig..."
+[[ -f .env ]] && echo "✅ .env file exists." || echo "❌ .env file missing!"
+php artisan config:clear && php artisan config:cache && echo "✅ config cached." || echo "❌ config cache failed."
+php artisan storage:link && echo "✅ storage link OK." || echo "⚠️ storage link failed."
+[ -w storage ] && echo "✅ storage is writable." || echo "❌ storage is not writable!"
+[ -w bootstrap/cache ] && echo "✅ bootstrap/cache is writable." || echo "❌ bootstrap/cache is not writable!"
+php artisan key:generate --show || echo "❌ APP_KEY missing or invalid."
+php artisan migrate:status || echo "⚠️ DB connection issue or no migrations."
+echo "✅ Done Laravel Auto Check."
+EOF
+chmod +x /usr/local/bin/laravel-check
