@@ -3,6 +3,9 @@ set -e
 
 PHP_VERSION="8.2"
 LARAVEL_FOLDER="devnogosec"
+LARAVEL_PATH="/var/www/$LARAVEL_FOLDER"
+NGINXCTL_PATH="/usr/local/bin/nginxctl"
+
 
 ### STEP 0: CREATE nginxadmin USER IF NEEDED ###
 echo "[+] Checking if user 'nginxadmin' exists..."
@@ -53,18 +56,163 @@ done
 
 ### STEP 2: CREATE nginxctl HELPER ###
 echo "[+] Creating nginxctl helper..."
-cat > /usr/local/bin/nginxctl <<'EOF'
+# Create nginxctl tool
+cat <<'EOF' > "$NGINXCTL_PATH"
 #!/bin/bash
+
+# nginxctl v2.1 - API Development Helper with Emoji Boost ✨
+
+NGINX_USER="nginxadmin"
+NGINX_GROUP="nginxadmin"
+
+NGINX_BIN="/usr/sbin/nginx"
+NGINX_PID="/run/nginx.pid"
+NGINX_LOG="/var/log/nginx/error.log"
+PID_FILE="$NGINX_PID"
+
+LARAVEL_FOLDER="devnogosec"
+LARAVEL_PATH="/var/www/$LARAVEL_FOLDER"
+LARAVEL_LOG="$LARAVEL_PATH/storage/logs/laravel.log"
+PHP_VERSION="8.2"
+PHPFPM_SERVICE="php${PHP_VERSION}-fpm"
+PHPFPM_ERROR_LOG="/var/log/php${PHP_VERSION}-fpm.log"
+
+PORT_HTTP=8000
+PORT_HTTPS=8443
+
+function is_nginx_running() {
+    pgrep -x nginx > /dev/null
+    return $?
+}
+
+function check_ports() {
+    echo "🔍 Mengecek port $PORT_HTTP dan $PORT_HTTPS..."
+    sudo ss -tuln | grep -E ":$PORT_HTTP|:$PORT_HTTPS" || echo "ℹ️  Tidak ada proses yang menggunakan port $PORT_HTTP atau $PORT_HTTPS."
+}
+
+function fix_permissions() {
+  echo "🛠️  Memperbaiki permission storage & cache ke $NGINX_USER:$NGINX_GROUP ..."
+  sudo chown -R "$NGINX_USER:$NGINX_GROUP" "$LARAVEL_PATH/storage" "$LARAVEL_PATH/bootstrap/cache"
+}
+
+function laravel_cache() {
+    echo "📦 Menjalankan Laravel cache commands..."
+    cd "$LARAVEL_PATH" || { echo "❌ Gagal masuk ke folder Laravel"; exit 1; }
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    echo "🛠️  Rename modifier file karena sebelumnya dibuat oleh root..."
+    fix_permissions
+}
+
+function check_laravel_log() {
+    echo "📄 Log error Laravel (150 baris terakhir)"
+    tail -n 150 "$LARAVEL_LOG"
+}
+
+function check_phpfpm_log() {
+    echo "📄 Log error PHP-FPM (150 baris terakhir)"
+    tail -n 150 "$PHPFPM_ERROR_LOG"
+}
+
+function php_fpm_start() {
+    echo "🚀 Memulai PHP-FPM..."
+    sudo systemctl start $PHPFPM_SERVICE && echo "✅ PHP-FPM berjalan."
+}
+
+function php_fpm_stop() {
+    echo "🛑 Menghentikan PHP-FPM..."
+    sudo systemctl stop $PHPFPM_SERVICE && echo "✅ PHP-FPM berhenti."
+}
+
+function php_fpm_restart() {
+    echo "♻️  Me-restart PHP-FPM..."
+    sudo systemctl restart $PHPFPM_SERVICE && echo "✅ PHP-FPM berhasil di-restart."
+}
+
+function php_fpm_status() {
+    echo "👀 Status PHP-FPM:"
+    sudo systemctl status $PHPFPM_SERVICE --no-pager
+}
+
 case "$1" in
-  start) sudo systemctl start nginx ;;
-  stop) sudo systemctl stop nginx ;;
-  restart) sudo systemctl restart nginx ;;
-  reload) sudo nginx -s reload ;;
-  configtest) sudo nginx -t ;;
-  *) echo "Usage: $0 {start|stop|restart|reload|configtest}" ;;
+  start)
+    if is_nginx_running; then
+      echo "⚠️  Nginx sudah berjalan."
+    else
+      echo "🚀 Memulai Nginx..."
+      check_ports
+      sudo $NGINX_BIN
+      sleep 1
+      if is_nginx_running; then
+        echo "✅ Nginx berhasil dimulai."
+      else
+        echo "❌ Gagal memulai Nginx. Lihat log: $NGINX_LOG"
+      fi
+    fi
+    ;;
+  stop)
+    echo "🛑 Menghentikan Nginx..."
+    if [ -f "$PID_FILE" ]; then
+      PID=$(cat "$PID_FILE")
+      if kill "$PID" 2>/dev/null; then
+        echo "✅ Nginx berhasil dihentikan."
+      else
+        echo "⚠️  Gagal menghentikan proses PID $PID. Gunakan sudo atau periksa izin."
+      fi
+    else
+       echo "❌ File PID tidak ditemukan di $PID_FILE"
+       echo "👀 Cek manual: ps aux | grep nginx"
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  log)
+    echo "📄 Menampilkan log error Nginx:"
+    tail -f $NGINX_LOG
+    ;;
+  ports)
+    check_ports
+    ;;
+  laravel-log)
+    check_laravel_log
+    ;;
+  phpfpm-log)
+    check_phpfpm_log
+    ;;
+  phpfpmstart)
+    php_fpm_start
+    laravel_cache
+    ;;
+  phpfpmstop)
+    php_fpm_stop
+    laravel_cache
+    ;;
+  phpfpmrestart)
+    php_fpm_restart
+    laravel_cache
+    ;;
+  phpfpmstatus)
+    php_fpm_status
+    ;;
+  restarteperithing)
+    $0 stop
+    sleep 1
+    $0 start
+    php_fpm_restart
+    laravel_cache
+    ;;
+  *)
+    echo "🛠️  Gunakan: $0 {restarteperithing|start|stop|restart|log|ports|laravel-log|phpfpm-log|phpfpmstart|phpfpmstop|phpfpmrestart|phpfpmstatus}"
+    ;;
 esac
 EOF
-chmod +x /usr/local/bin/nginxctl
+
+chmod +x "$NGINXCTL_PATH"
+echo "✅ nginxctl telah digenerate di $NGINXCTL_PATH"
 
 ### STEP 3: CREATE xdebug-check HELPER ###
 echo "[+] Creating xdebug-check helper..."
