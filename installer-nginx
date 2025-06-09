@@ -1,4 +1,5 @@
 #!/bin/bash
+trap 'echo "❌ Error pada baris $LINENO. Eksekusi dihentikan."' ERR
 set -e
 
 PHP_VERSION="8.2"
@@ -390,28 +391,35 @@ cat > /usr/local/bin/firewall-setup <<EOF
 #!/bin/bash
 
 NGINX_HTTP_PORT=8000
-NGINX_HTTPS_PORT=8443
 
-echo "[+] Konfigurasi firewall (ufw) untuk membuka port ${NGINX_HTTP_PORT}..."
-read -rp "Masukkan IP client yang diizinkan mengakses port ${NGINX_HTTP_PORT} (contoh: 172.16.50.0/24 atau anywhere): " CLIENT_IP
+echo "[+] Konfigurasi firewall (ufw) untuk membuka port \${NGINX_HTTP_PORT}..."
+read -rp "Masukkan IP client yang diizinkan mengakses port \${NGINX_HTTP_PORT} (contoh: 172.16.50.0/24 atau anywhere): " CLIENT_IP
 
-# IP regex sederhana untuk IPv4 atau IPv4 + CIDR
-IP_REGEX='^([0-9]{1,3}\.){3}[0-9]{1,3}(/([0-9]|[1-2][0-9]|3[0-2]))?$'
+# Validasi: IPv4, IPv6, CIDR, atau 'anywhere' (case-insensitive)
+IP_REGEX_IPV4='^([0-9]{1,3}\.){3}[0-9]{1,3}(/([0-9]|[1-2][0-9]|3[0-2]))?$'
+IP_REGEX_IPV6='^([a-fA-F0-9:]+)(/[0-9]{1,3})?$'
 
-if [[ "$CLIENT_IP" =~ $IP_REGEX ]] || [[ "${CLIENT_IP,,}" == "anywhere" ]]; then
-    IP_DESC="${CLIENT_IP,,}"  # lowercase only for display & consistency
+if [[ "\$CLIENT_IP" =~ \$IP_REGEX_IPV4 || "\$CLIENT_IP" =~ \$IP_REGEX_IPV6 || "\${CLIENT_IP,,}" == "anywhere" ]]; then
+    IP_DESC="\${CLIENT_IP,,}"
     if command -v ufw &>/dev/null; then
-        sudo ufw allow from "$CLIENT_IP" to any port ${NGINX_HTTP_PORT} proto tcp
-        echo "✅ Akses port ${NGINX_HTTP_PORT}/tcp diizinkan untuk IP: $CLIENT_IP via ufw."
+        sudo ufw allow from "\$CLIENT_IP" to any port \${NGINX_HTTP_PORT} proto tcp
+        echo "✅ Akses port \${NGINX_HTTP_PORT}/tcp diizinkan untuk IP: \$CLIENT_IP via ufw."
     else
-        sudo iptables -A INPUT -p tcp -s "$CLIENT_IP" --dport ${NGINX_HTTP_PORT} -j ACCEPT
-        echo "✅ Akses port ${NGINX_HTTP_PORT}/tcp diizinkan untuk IP: $CLIENT_IP via iptables."
+        sudo iptables -A INPUT -p tcp -s "\$CLIENT_IP" --dport \${NGINX_HTTP_PORT} -j ACCEPT
+        echo "✅ Akses port \${NGINX_HTTP_PORT}/tcp diizinkan untuk IP: \$CLIENT_IP via iptables."
     fi
 else
-    echo "❌ Format IP tidak valid! Contoh valid: 192.168.1.100, 192.168.1.0/24, atau 'anywhere'"
+    echo "❌ Format IP tidak valid! Contoh valid: 192.168.1.100, 192.168.1.0/24, 2001:db8::1, atau 'anywhere'"
     echo "⚠️  Proses konfigurasi firewall tidak dieksekusi."
 fi
-echo "✅ Done Firewall-setup."
+
+### CHECK UFW STATUS ###
+echo "[+] Mengecek status firewall untuk port \${NGINX_HTTP_PORT}..."
+if command -v ufw &>/dev/null; then
+    sudo ufw status | grep -i \${NGINX_HTTP_PORT} || echo "ℹ️  Tidak ditemukan rule ufw aktif untuk port \${NGINX_HTTP_PORT}."
+else
+    echo "⚠️  UFW tidak terdeteksi. Cek manual via iptables jika diperlukan."
+fi
 EOF
 chmod +x /usr/local/bin/firewall-setup
 
@@ -428,15 +436,8 @@ if ! grep -q 'alias firewall-setup=' ~/.bashrc; then
 fi
 
 echo "Check listening port"
-sudo ss -tuln | grep 8000
-sudo ss -tuln | grep 8443
-
-echo "Check firewall status untuk listen dari luar"
-sudo ufw status | grep 8000
+ss -tuln | grep 8000
 
 ### Final Script After Berjalan ###
-source ~/.bashrc
 firewall-setup
 nginxctl restarteperithing
-
-
