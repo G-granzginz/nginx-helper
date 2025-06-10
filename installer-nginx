@@ -65,6 +65,10 @@ done
 ### STEP Additional 1 : CONFIGURE NGINX USER ###
 echo "[+] Updating nginx.conf to use user nginxadmin..."
 sed -i 's/^user .*/user nginxadmin;/' /etc/nginx/nginx.conf || echo 'user nginxadmin;' >> /etc/nginx/nginx.conf
+sed -i 's/^group .*/group nginxadmin;/' /etc/nginx/nginx.conf || echo 'group nginxadmin;' >> /etc/nginx/nginx.conf
+sed -i 's/^listen.owner .*/listen.owner nginxadmin;/' /etc/nginx/nginx.conf || echo 'listen.owner nginxadmin;' >> /etc/nginx/nginx.conf
+sed -i 's/^listen.group .*/listen.group nginxadmin;/' /etc/nginx/nginx.conf || echo 'listen.group nginxadmin;' >> /etc/nginx/nginx.conf
+echo "[✓] Konfigurasi user, group, listen.owner dan listen.group menjadi nginxadmin selesai."
 
 ### STEP Additional 1 : CONFIGURE NGINX PORT ###
 echo "[+] Updating Nginx site config ports..."
