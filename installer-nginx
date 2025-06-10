@@ -1,6 +1,21 @@
 #!/bin/bash
+echo "*========================================================================*"
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+
 trap 'echo "❌ Error pada baris $LINENO. Eksekusi dihentikan."' ERR
+echo "*========================================================================*"
 set -e
+echo " "
+echo " "
+echo " "
 
 PHP_VERSION="8.2"
 LARAVEL_FOLDER="devnogosec"
@@ -9,14 +24,37 @@ NGINXCTL_PATH="/usr/local/bin/nginxctl"
 # Custom port variables
 NGINX_HTTP_PORT=8000
 NGINX_HTTPS_PORT=8443
+FPM_POOL_CONF="/etc/php/8.2/fpm/pool.d/www.conf"
 
+echo "========================================================================*"
 echo "🛠️  Mencari dan menghentikan semua proses nginx..."
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+
 systemctl stop nginx && echo "✅ Nginx hard stop : Semua proses nginx berhasil dihentikan." || echo "ℹ️  Tidak ada proses nginx yang aktif."
 systemctl stop php${PHP_VERSION}-fpm && echo "✅ Php-fpm hard stop : Semua proses php${PHP_VERSION}-fpm berhasil dihentikan." || echo "ℹ️  Tidak ada proses php${PHP_VERSION}-fpm yang aktif."
-
+echo " "
+echo " "
+echo " "
+echo "========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 0: CREATE nginxadmin USER IF NEEDED ###
+echo "CREATE nginxadmin USER IF NEEDED========================================================================*"
 echo "[+] Checking if user 'nginxadmin' exists..."
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+
 if ! id -u nginxadmin >/dev/null 2>&1; then
     echo "[+] Creating user nginxadmin..."
     useradd -m -s /bin/bash nginxadmin
@@ -26,9 +64,25 @@ if ! id -u nginxadmin >/dev/null 2>&1; then
 else
     echo "[✓] User nginxadmin already exists."
 fi
+echo " "
+echo " "
+echo " "
+
+echo "CREATE nginxadmin USER IF NEEDED========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 0.1: CHECK IF SERVICES ARE RUNNING AND STOP IF NECESSARY ###
+echo "CHECK IF SERVICES ARE RUNNING AND STOP IF NECESSARY========================================================================*"
 echo "[+] Checking and stopping running services before proceeding..."
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+
 for svc in nginx php${PHP_VERSION}-fpm; do
     if systemctl is-active --quiet $svc; then
         echo "[!] Service '$svc' is running. Stopping it..."
@@ -39,18 +93,50 @@ for svc in nginx php${PHP_VERSION}-fpm; do
     fi
     echo "[+] Skipping manual kill for '$svc'."
 done
+echo " "
+echo " "
+echo " "
+
+echo "CHECK IF SERVICES ARE RUNNING AND STOP IF NECESSARY========================================================================*"
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
 
 ### STEP 0.2: KILL ANY www-data PHP-FPM WORKERS ###
+echo "KILL ANY www-data PHP-FPM WORKERS========================================================================*"
 echo "[+] Checking for PHP-FPM processes running as www-data..."
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+echo " "
+
 if pgrep -u www-data php-fpm > /dev/null; then
     echo "[!] Killing php-fpm processes owned by www-data..."
     pkill -u www-data php-fpm && echo "[✓] Killed www-data php-fpm processes."
 else
     echo "[✓] No php-fpm processes owned by www-data."
 fi
+echo " "
+echo " "
+echo " "
+
+echo "KILL ANY www-data PHP-FPM WORKERS========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 1: VALIDATE DEPENDENCIES ###
+echo "VALIDATE DEPENDENCIES========================================================================*"
 echo "[+] Validating required packages..."
+echo " "
+echo " "
+echo " "
+
 REQUIRED_PKG=(nginx php${PHP_VERSION} php${PHP_VERSION}-fpm php${PHP_VERSION}-xdebug net-tools)
 for pkg in "${REQUIRED_PKG[@]}"; do
     if ! dpkg -s "$pkg" &>/dev/null; then
@@ -61,17 +147,68 @@ for pkg in "${REQUIRED_PKG[@]}"; do
     fi
     alias laravel-check='/usr/local/bin/laravel-check'
 done
+echo " "
+echo " "
+echo " "
+
+echo "VALIDATE DEPENDENCIES========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP Additional 1 : CONFIGURE NGINX USER ###
+echo "STEP Additional 1 : CONFIGURE NGINX USER========================================================================"
 echo "[+] Updating nginx.conf to use user nginxadmin..."
+echo " "
+echo " "
+echo " "
+
 sed -i 's/^user .*/user nginxadmin;/' /etc/nginx/nginx.conf || echo 'user nginxadmin;' >> /etc/nginx/nginx.conf
-sed -i 's/^group .*/group nginxadmin;/' /etc/nginx/nginx.conf || echo 'group nginxadmin;' >> /etc/nginx/nginx.conf
-sed -i 's/^listen.owner .*/listen.owner nginxadmin;/' /etc/nginx/nginx.conf || echo 'listen.owner nginxadmin;' >> /etc/nginx/nginx.conf
-sed -i 's/^listen.group .*/listen.group nginxadmin;/' /etc/nginx/nginx.conf || echo 'listen.group nginxadmin;' >> /etc/nginx/nginx.conf
-echo "[✓] Konfigurasi user, group, listen.owner dan listen.group menjadi nginxadmin selesai."
+# Nginx tidak butuh konfigurasi group di nginx.conf, jadi baris ini bisa dihapus atau dikomentari
+# sed -i 's/^group .*/group nginxadmin;/' /etc/nginx/nginx.conf || echo 'group nginxadmin;' >> /etc/nginx/nginx.conf
+echo " "
+echo " "
+echo " "
+
+echo "[✓] Nginx user dan group updated."
+echo "STEP Additional 1 : CONFIGURE NGINX USER========================================================================"
+echo " "
+echo " "
+echo " "
+
+### STEP Additional 2 : CONFIGURE PHP-FPM POOL ###
+echo "STEP Additional 2 : CONFIGURE PHP-FPM POOL========================================================================*"
+echo "[+] Updating PHP-FPM pool config at $FPM_POOL_CONF..."
+echo " "
+echo " "
+echo " "
+
+if grep -q '^listen.owner' "$FPM_POOL_CONF"; then
+    sed -i 's/^listen.owner.*/listen.owner = nginxadmin/' "$FPM_POOL_CONF"
+else
+    echo 'listen.owner = nginxadmin' >> "$FPM_POOL_CONF"
+fi
+echo "[✓] Nginx listen.owner updated."
+if grep -q '^listen.group' "$FPM_POOL_CONF"; then
+    sed -i 's/^listen.group.*/listen.group = nginxadmin/' "$FPM_POOL_CONF"
+else
+    echo 'listen.group = nginxadmin' >> "$FPM_POOL_CONF"
+fi
+echo "[✓] Nginx listen.group updated."
+echo "========================================================================"
+echo "[✓] Konfigurasi listen.owner dan listen.group untuk PHP-FPM selesai."
+echo "========================================================================"
+echo " "
+echo " "
+echo " "
 
 ### STEP Additional 1 : CONFIGURE NGINX PORT ###
+echo "STEP Additional 1 : CONFIGURE NGINX PORT========================================================================*"
 echo "[+] Updating Nginx site config ports..."
+echo " "
+echo " "
+echo " "
+
 NGINX_SITE_CONF="/etc/nginx/sites-available/$(ls /etc/nginx/sites-enabled/ | head -n 1)"
 if [[ -f "$NGINX_SITE_CONF" ]]; then
   sed -i "/listen 80 default_server;/d" "$NGINX_SITE_CONF"
@@ -86,9 +223,22 @@ if [[ -f "$NGINX_SITE_CONF" ]]; then
 else
   echo "\u274c Nginx site config not found."
 fi
+echo " "
+echo " "
+echo " "
+
+echo "STEP Additional 1 : CONFIGURE NGINX PORT========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 2: CREATE nginxctl HELPER ###
+echo "STEP 2: CREATE nginxctl HELPER========================================================================*"
 echo "[+] Creating nginxctl helper..."
+echo " "
+echo " "
+echo " "
+
 # Create nginxctl tool
 cat <<'EOF' > "$NGINXCTL_PATH"
 #!/bin/bash
@@ -254,10 +404,23 @@ esac
 EOF
 
 chmod +x "$NGINXCTL_PATH"
+echo " "
+echo " "
+echo " "
+
 echo "✅ nginxctl telah digenerate di $NGINXCTL_PATH"
+echo "STEP 2: CREATE nginxctl HELPER========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 3: CREATE xdebug-check HELPER ###
+echo "STEP 3: CREATE xdebug-check HELPER========================================================================*"
 echo "[+] Creating xdebug-check helper..."
+echo " "
+echo " "
+echo " "
+
 cat > /usr/local/bin/xdebug-check <<EOF
 #!/bin/bash
 
@@ -316,18 +479,49 @@ tail_log
 echo -e "\n✅ Done."
 EOF
 chmod +x /usr/local/bin/xdebug-check
+echo " "
+echo " "
+echo " "
+
+echo "STEP 3: CREATE xdebug-check HELPER========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 4: CONFIGURE NGINX USER ###
+echo "STEP 4: CONFIGURE NGINX USER========================================================================*"
 echo "[+] Updating nginx.conf to use user nginxadmin..."
+echo " "
+echo " "
+echo " "
+
 sed -i 's/^user .*/user nginxadmin;/' /etc/nginx/nginx.conf || echo 'user nginxadmin;' >> /etc/nginx/nginx.conf
+echo "STEP 4: CONFIGURE NGINX USER========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 5: CONFIGURE PHP-FPM USER AND SOCKET ###
+echo "STEP 5: CONFIGURE PHP-FPM USER AND SOCKET========================================================================*"
 echo "[+] Updating PHP-FPM pool configuration..."
+echo " "
+echo " "
+echo " "
+
 sed -i "s/^user = .*/user = nginxadmin/" /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf
 sed -i "s/^group = .*/group = nginxadmin/" /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf
+echo "STEP 5: CONFIGURE PHP-FPM USER AND SOCKET========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 6: FIX PERMISSIONS ###
+echo "STEP 6: FIX PERMISSIONS========================================================================*"
 echo "[+] Fixing permissions for Laravel and Xdebug log..."
+echo " "
+echo " "
+echo " "
+
 mkdir -p /var/log/xdebug
 chown -R nginxadmin:nginxadmin /var/log/xdebug
 
@@ -339,18 +533,57 @@ for dir in /var/www/*; do
   fi
 
 done
+echo " "
+echo " "
+echo " "
+
+echo "STEP 6: FIX PERMISSIONS========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 7: RESTART SERVICES ###
+echo "STEP 7: RESTART SERVICES========================================================================*"
 echo "[+] Restarting services..."
+echo " "
+echo " "
+echo " "
+
 systemctl restart php${PHP_VERSION}-fpm
 systemctl restart nginx
+echo " "
+echo " "
+echo " "
+
+echo "STEP 7: RESTART SERVICES========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 8: VALIDATION ###
+echo "STEP 8: VALIDATION========================================================================*"
 echo "[+] Running nginxctl and xdebug-check..."
+echo " "
+echo " "
+echo " "
+
 nginxctl restart
 xdebug-check
+echo " "
+echo " "
+echo " "
+
+echo "STEP 8: VALIDATION========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 9: DISPLAY CONFIG LOCATIONS ###
+echo "STEP 9: DISPLAY CONFIG LOCATIONS========================================================================*"
+echo " "
+echo " "
+echo " "
+
 echo -e "\n📁 Konfigurasi utama yang digunakan:"
 echo " - Nginx global config      : /etc/nginx/nginx.conf"
 echo " - Nginx site config        : /etc/nginx/sites-available/\$(ls /etc/nginx/sites-enabled/ | head -n 1)"
@@ -367,9 +600,18 @@ echo " - Laravel Alias   → run 'source ~/.bashrc' lalu pakai: laravel-check"
 echo -e "\n✅ Semua konfigurasi siap digunakan dengan user 'nginxadmin'. (Password default: nginxadmin)"
 
 echo -e "\n🚀 Setup complete! You may now test your Laravel app with Xdebug + nginxadmin user."
+echo "STEP 9: DISPLAY CONFIG LOCATIONS========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 10: LARAVEL AUTOCONFIG CHECKER ###
+echo "STEP 10: LARAVEL AUTOCONFIG CHECKER========================================================================*"
 echo "[+] Creating laravel-check helper..."
+echo " "
+echo " "
+echo " "
+
 cat > /usr/local/bin/laravel-check <<EOF
 #!/bin/bash
 
@@ -388,9 +630,22 @@ php artisan migrate:status || echo "⚠️ DB connection issue or no migrations.
 echo "✅ Done Laravel Auto Check."
 EOF
 chmod +x /usr/local/bin/laravel-check
+echo " "
+echo " "
+echo " "
+
+echo "STEP 10: LARAVEL AUTOCONFIG CHECKER========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### STEP 11: UFW FIREWALL INTERAKTIF UNTUK PORT HTTP ###
+echo "STEP 11: UFW FIREWALL INTERAKTIF UNTUK PORT HTTP========================================================================*"
 echo "[+] Creating firewall-setup helper..."
+echo " "
+echo " "
+echo " "
+
 cat > /usr/local/bin/firewall-setup <<EOF
 #!/bin/bash
 
@@ -416,9 +671,23 @@ else
     echo "❌ Format IP tidak valid! Contoh valid: 192.168.1.100, 192.168.1.0/24, 2001:db8::1, atau 'anywhere'"
     echo "⚠️  Proses konfigurasi firewall tidak dieksekusi."
 fi
+echo " "
+echo " "
+echo " "
+
+echo "STEP 11: UFW FIREWALL INTERAKTIF UNTUK PORT HTTP========================================================================*"
+echo " "
+echo " "
+echo " "
+
 
 ### CHECK UFW STATUS ###
+echo "CHECK UFW STATUS========================================================================*"
 echo "[+] Mengecek status firewall untuk port \${NGINX_HTTP_PORT}..."
+echo " "
+echo " "
+echo " "
+
 if command -v ufw &>/dev/null; then
     sudo ufw status | grep -i \${NGINX_HTTP_PORT} || echo "ℹ️  Tidak ditemukan rule ufw aktif untuk port \${NGINX_HTTP_PORT}."
 else
@@ -426,6 +695,19 @@ else
 fi
 EOF
 chmod +x /usr/local/bin/firewall-setup
+echo " "
+echo " "
+echo " "
+
+echo "CHECK UFW STATUS========================================================================*"
+echo " "
+echo " "
+echo " "
+
+echo "Register alias to ~/.bashrc========================================================================*"
+echo " "
+echo " "
+echo " "
 
 # Register alias to ~/.bashrc
 if ! grep -q 'alias laravel-check=' ~/.bashrc; then
@@ -438,10 +720,30 @@ if ! grep -q 'alias firewall-setup=' ~/.bashrc; then
     echo "alias firewall-setup='/usr/local/bin/firewall-setup'" >> ~/.bashrc
     echo "[+] Firewall-setup registered. Run 'source ~/.bashrc' to activate it."
 fi
+echo " "
+echo " "
+echo " "
+
+echo "Register alias to ~/.bashrc========================================================================*"
+echo "========================================================================*"
+echo " "
+echo " "
+echo " "
 
 echo "Check listening port"
+echo "Check listening port========================================================================*"
+echo " "
+echo " "
+echo " "
+
 ss -tuln | grep 8000
+
+echo "Check listening port========================================================================*"
+echo " "
+echo " "
+echo " "
 
 ### Final Script After Berjalan ###
 firewall-setup
 nginxctl restarteperithing
+echo "========================================================================*"
