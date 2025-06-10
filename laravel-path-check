@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Laravel path check by ChatGPT & Ginanjar
+PROJECT_PATH="/var/www/devnogosec"
+INDEX_FILE="$PROJECT_PATH/public/index.php"
+VENDOR_AUTOLOAD="$PROJECT_PATH/vendor/autoload.php"
+BOOTSTRAP_APP="$PROJECT_PATH/bootstrap/app.php"
+
+echo "🔍 Memeriksa struktur Laravel di: $PROJECT_PATH"
+echo
+
+# 1. Cek keberadaan file penting
+missing=0
+
+if [[ ! -f "$INDEX_FILE" ]]; then
+    echo "❌ Tidak ditemukan: $INDEX_FILE"
+    missing=1
+fi
+
+if [[ ! -f "$VENDOR_AUTOLOAD" ]]; then
+    echo "❌ Tidak ditemukan: $VENDOR_AUTOLOAD"
+    missing=1
+fi
+
+if [[ ! -f "$BOOTSTRAP_APP" ]]; then
+    echo "❌ Tidak ditemukan: $BOOTSTRAP_APP"
+    missing=1
+fi
+
+# 2. Cek isi path di index.php
+if [[ -f "$INDEX_FILE" ]]; then
+    echo
+    echo "🔍 Memeriksa path require di $INDEX_FILE"
+
+    AUTOLOAD_LINE=$(grep "vendor/autoload.php" "$INDEX_FILE")
+    BOOTSTRAP_LINE=$(grep "bootstrap/app.php" "$INDEX_FILE")
+
+    if [[ "$AUTOLOAD_LINE" != *"../vendor/autoload.php"* ]]; then
+        echo "⚠️  Path ke autoload.php salah:"
+        echo "    → $AUTOLOAD_LINE"
+    else
+        echo "✅ Path autoload.php OK"
+    fi
+
+    if [[ "$BOOTSTRAP_LINE" != *"../bootstrap/app.php"* ]]; then
+        echo "⚠️  Path ke bootstrap/app.php salah:"
+        echo "    → $BOOTSTRAP_LINE"
+    else
+        echo "✅ Path bootstrap/app.php OK"
+    fi
+fi
+
+# 3. Kesimpulan
+echo
+if [[ "$missing" -eq 1 ]]; then
+    echo "🚨 Beberapa file penting Laravel hilang!"
+    exit 1
+else
+    echo "✅ Struktur dan path Laravel terlihat OK! Tinggal jalanin aplikasinya 🚀"
+    exit 0
+fi
