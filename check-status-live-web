@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo "🔍 Cek status PHP-FPM..."
+
+PHP_FPM_SERVICE=$(systemctl list-units --type=service | grep php | grep fpm | awk '{print $1}' | head -n 1)
+
+if [ -z "$PHP_FPM_SERVICE" ]; then
+    echo "❌ PHP-FPM service tidak ditemukan."
+    exit 1
+fi
+
+systemctl is-active --quiet "$PHP_FPM_SERVICE"
+if [ $? -eq 0 ]; then
+    echo "✅ PHP-FPM ($PHP_FPM_SERVICE) sedang BERJALAN (UP)."
+else
+    echo "❌ PHP-FPM ($PHP_FPM_SERVICE) sedang TIDAK BERJALAN (DOWN)."
+fi
